@@ -3,342 +3,683 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Orçamento Pedreiro PRO V5</title>
-
+<title>Orçamento Pedreiro PRO V7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
 <style>
-body{font-family:Arial, sans-serif;background:#0f172a;color:#fff;padding:12px;margin:0;}
-.card{background:#111827;padding:15px;border-radius:10px;margin-bottom:10px;border:1px solid #1e293b;}
-.service{
-background:#1f2937;
-padding:14px;
-border-radius:10px;
-margin:8px 0;
-cursor:pointer;
-font-weight:bold;
-transition: background 0.2s;
-}
-.service.active{background:#38bdf8;color:#000}
-.box{
-margin-top:10px;
-background:#0b1220;
-padding:12px;
-border-radius:10px;
-border:1px solid #334155;
-color: #fff;
-cursor: default;
-}
-input,select,button{
-width:100%;
-padding:10px;
-margin-top:8px;
-border-radius:8px;
-border:1px solid #334155;
-background:#1f2937;
-color:#fff;
-box-sizing: border-box;
-}
-input:focus, select:focus {outline: 2px solid #38bdf8;}
-button{background:#38bdf8;color:#000;font-weight:bold;cursor:pointer;border:0;margin-top:15px;font-size:16px;}
-button:hover{background:#0ea5e9;}
-.badge{display:inline-block;background:#1e293b;padding:6px 10px;margin:4px;border-radius:6px;font-size:13px;border:1px solid #334155;}
-.total{font-size:24px;color:#38bdf8;font-weight:bold;margin-top:12px;}
-label {font-size:12px; color:#94a3b8; display:block; margin-top:8px;}
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #fff;
+    padding: 12px;
+    margin: 0;
+  }
+
+  .card {
+    background: #111827;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #1e293b;
+  }
+
+  .card h2, .card h3 {
+    margin: 0 0 10px 0;
+  }
+
+  /* --- Serviço header (sempre visível) --- */
+  .service-header {
+    background: #1f2937;
+    padding: 14px;
+    border-radius: 10px;
+    margin: 8px 0 0 0;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+  .service-header:hover { background: #2d3f55; }
+  .service-header.active { background: #38bdf8; color: #000; border-radius: 10px 10px 0 0; }
+
+  .service-header .arrow {
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+  .service-header.active .arrow { transform: rotate(180deg); }
+
+  /* --- Box de detalhes (separado do header) --- */
+  .service-body {
+    background: #0b1220;
+    padding: 12px;
+    border-radius: 0 0 10px 10px;
+    border: 1px solid #334155;
+    border-top: none;
+    display: none;
+  }
+  .service-body.open { display: block; }
+
+  /* --- Wrapper do serviço --- */
+  .service-item {
+    margin: 8px 0;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #1f2937;
+    color: #fff;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid #38bdf8;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 8px;
+    border: 0;
+    background: #38bdf8;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s;
+  }
+  button:hover { background: #0ea5e9; }
+  button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+  .badge {
+    display: inline-block;
+    background: #1e293b;
+    padding: 6px 10px;
+    margin: 4px;
+    border-radius: 6px;
+    font-size: 13px;
+    border: 1px solid #334155;
+  }
+
+  .total {
+    font-size: 24px;
+    color: #38bdf8;
+    font-weight: bold;
+    margin-top: 12px;
+  }
+
+  label {
+    font-size: 12px;
+    color: #94a3b8;
+    display: block;
+    margin-top: 8px;
+  }
+
+  .empty-msg {
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .alert {
+    background: #7f1d1d;
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 13px;
+    display: none;
+  }
 </style>
 </head>
 
 <body>
 
 <div class="card">
-<h2>Orçamento Pedreiro PRO</h2>
+  <h2>🧱 Orçamento Pedreiro PRO</h2>
 </div>
 
 <div class="card">
-<h3>Cliente</h3>
-<input id="nome" placeholder="Nome do Cliente">
-<input id="tel" placeholder="Telefone / WhatsApp">
-<input id="cidade" placeholder="Cidade / Estado">
+  <h3>Cliente</h3>
+  <input id="nome" placeholder="Nome do Cliente">
+  <input id="tel" placeholder="Telefone / WhatsApp">
+  <input id="cidade" placeholder="Cidade / Estado">
 </div>
 
 <div class="card">
-<h3>Serviços</h3>
-<div id="services"></div>
+  <h3>Serviços</h3>
+  <div id="services"></div>
 </div>
 
 <div class="card">
-<h3>Resumo</h3>
-<div id="res"></div>
-<div class="total" id="total">R$ 0,00</div>
-<button onclick="gerarPDF()">Gerar PDF Profissional</button>
+  <h3>Resumo</h3>
+  <div id="res"></div>
+  <div class="total" id="total">R$ 0,00</div>
+  <div class="alert" id="alert-pdf">⚠️ Adicione pelo menos um serviço com valor antes de gerar o PDF.</div>
+  <button onclick="gerarPDF()">📄 Gerar PDF Profissional</button>
 </div>
 
 <script>
 const SERVICOS = [
-{
-id:"muro",
-nome:"Muro",
-campos:["altura","comprimento","valor"],
-tipos:["Tijolo comum","Tijolo 8 furos","Bloco de concreto","Arrimo","Pedra/Gabião"],
-calc:d=>(+d.altura||0)*(+d.comprimento||0)
-},
-{
-id:"alvenaria",
-nome:"Parede / Alvenaria",
-campos:["altura","comprimento","valor"],
-tipos:["Tijolo comum","Tijolo 8 furos","Bloco de concreto","Bloco cerâmico","Tijolo à vista"],
-calc:d=>(+d.altura||0)*(+d.comprimento||0)
-},
-{
-id:"reboco",
-nome:"Reboco / Emboço",
-campos:["area","valor"],
-tipos:["Reboco interno","Reboco externo","Emboço fino","Chapisco + reboco","Paulista"],
-calc:d=>+d.area||0
-},
-{
-id:"piso",
-nome:"Piso / Calçada",
-campos:["largura","comprimento","valor"],
-tipos:["Calçada cimento","Concreto armado","Bloquete","Pedra portuguesa","Rampa","Pátio externo"],
-calc:d=>(+d.largura||0)*(+d.comprimento||0)
-},
-{
-id:"laje",
-nome:"Laje",
-campos:["area","valor"],
-tipos:["Convencional","Pré-moldada (vigota)","Cobertura","Piso intermediário"],
-calc:d=>+d.area||0
-},
-{
-id:"fundacao",
-nome:"Fundação / Sapata",
-campos:["area","valor"],
-tipos:["Viga baldrame","Sapata isolada","Radier","Fundação corrida"],
-calc:d=>+d.area||0
-},
-{
-id:"revestimento",
-nome:"Revestimento",
-campos:["area","valor"],
-tipos:["Cerâmica parede","Cerâmica piso","Porcelanato","Azulejo banheiro","Ardósia","Pastilha"],
-calc:d=>+d.area||0
-},
-{
-id:"cobertura",
-nome:"Cobertura / Telhado",
-campos:["area","valor"],
-tipos:["Cerâmica","Fibrocimento","Metálica","Shingle","2 águas","4 águas"],
-calc:d=>+d.area||0
-},
-{
-id:"contrapiso",
-nome:"Contrapiso",
-campos:["area","valor"],
-tipos:["Simples","Com tela","Com fibra"],
-calc:d=>+d.area||0
-},
-{
-id:"escada",
-nome:"Escada",
-campos:["degraus","valor"],
-tipos:["Concreto armado","Alvenaria","Externa"],
-calc:d=>+d.degraus||0
-},
-{
-id:"cisterna",
-nome:"Cisterna / Caixa",
-campos:["profundidade","valor"],
-tipos:["Anéis pré-moldados","Caixa enterrada","Caixa de passagem"],
-calc:d=>+d.profundidade||0
-},
-{
-id:"outros",
-nome:"Outros serviços",
-campos:["valor"],
-tipos:["Reforma geral","Demolição","Acabamento","Serviço avulso"],
-calc:d=>1
-}
+  // ── Estrutura e Fundação ──────────────────────────────────────────────────
+  {
+    id: "fundacao",
+    nome: "Fundação / Sapata",
+    grupo: "Estrutura",
+    campos: ["unidades", "largura", "comprimento", "profundidade", "valor", "obs"],
+    unidadeLabel: "Sapatas",
+    tipos: ["Viga baldrame","Sapata isolada","Radier","Fundação corrida"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.largura)||0) * (parseFloat(d.comprimento)||0) * (parseFloat(d.profundidade)||0)
+  },
+  {
+    id: "tubulao",
+    nome: "Tubulão",
+    grupo: "Estrutura",
+    campos: ["unidades", "diametro", "profundidade", "valor", "obs"],
+    unidadeLabel: "Tubulões",
+    tipos: ["Tubulão a céu aberto","Tubulão com bulbo","Tubulão a ar comprimido"],
+    calc: d => {
+      const r = (parseFloat(d.diametro)||0) / 2;
+      const vol = Math.PI * r * r * (parseFloat(d.profundidade)||0);
+      return (parseInt(d.unidades)||1) * vol;
+    }
+  },
+  {
+    id: "estaca",
+    nome: "Estaca",
+    grupo: "Estrutura",
+    campos: ["unidades", "diametro", "comprimento", "valor", "obs"],
+    unidadeLabel: "Estacas",
+    tipos: ["Estaca tipo hélice","Estaca raiz","Estaca escavada","Estaca prancha","Estaca pré-moldada"],
+    calc: d => {
+      const r = (parseFloat(d.diametro)||0) / 2;
+      const vol = Math.PI * r * r * (parseFloat(d.comprimento)||0);
+      return (parseInt(d.unidades)||1) * vol;
+    }
+  },
+  {
+    id: "pilar",
+    nome: "Pilar",
+    grupo: "Estrutura",
+    campos: ["unidades", "largura", "espessura", "altura", "valor", "obs"],
+    unidadeLabel: "Pilares",
+    tipos: ["Pilar de concreto armado","Pilar metálico","Pilar de alvenaria","Pilar circular"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.largura)||0) * (parseFloat(d.espessura)||0) * (parseFloat(d.altura)||0)
+  },
+  {
+    id: "viga",
+    nome: "Viga",
+    grupo: "Estrutura",
+    campos: ["unidades", "largura", "altura", "comprimento", "valor", "obs"],
+    unidadeLabel: "Vigas",
+    tipos: ["Viga de concreto armado","Viga baldrame","Viga de coroamento","Viga metálica","Viga pré-moldada"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.largura)||0) * (parseFloat(d.altura)||0) * (parseFloat(d.comprimento)||0)
+  },
+  {
+    id: "bloco_coroamento",
+    nome: "Bloco / Coxim",
+    grupo: "Estrutura",
+    campos: ["unidades", "largura", "comprimento", "altura", "valor", "obs"],
+    unidadeLabel: "Blocos",
+    tipos: ["Bloco de coroamento","Bloco de fundação","Coxim de pilar"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.largura)||0) * (parseFloat(d.comprimento)||0) * (parseFloat(d.altura)||0)
+  },
+  // ── Alvenaria e Vedação ───────────────────────────────────────────────────
+  {
+    id: "muro",
+    nome: "Muro",
+    grupo: "Alvenaria",
+    campos: ["altura", "comprimento", "valor", "obs"],
+    tipos: ["Tijolo comum","Tijolo 8 furos","Bloco de concreto","Arrimo","Pedra/Gabião"],
+    calc: d => (parseFloat(d.altura)||0) * (parseFloat(d.comprimento)||0)
+  },
+  {
+    id: "alvenaria",
+    nome: "Parede / Alvenaria",
+    grupo: "Alvenaria",
+    campos: ["altura", "comprimento", "valor", "obs"],
+    tipos: ["Tijolo comum","Tijolo 8 furos","Bloco de concreto","Bloco cerâmico","Tijolo à vista"],
+    calc: d => (parseFloat(d.altura)||0) * (parseFloat(d.comprimento)||0)
+  },
+  {
+    id: "verga",
+    nome: "Verga / Contraverga",
+    grupo: "Alvenaria",
+    campos: ["unidades", "comprimento", "valor", "obs"],
+    unidadeLabel: "Vergas",
+    tipos: ["Verga reta","Contraverga","Verga arqueada","Verga pré-moldada"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.comprimento)||0)
+  },
+  // ── Revestimentos ─────────────────────────────────────────────────────────
+  {
+    id: "reboco",
+    nome: "Reboco / Emboço",
+    grupo: "Revestimento",
+    campos: ["area", "valor", "obs"],
+    tipos: ["Reboco interno","Reboco externo","Emboço fino","Chapisco + reboco","Paulista"],
+    calc: d => parseFloat(d.area)||0
+  },
+  {
+    id: "revestimento",
+    nome: "Revestimento Cerâmico",
+    grupo: "Revestimento",
+    campos: ["area", "valor", "obs"],
+    tipos: ["Cerâmica parede","Cerâmica piso","Porcelanato","Azulejo banheiro","Ardósia","Pastilha"],
+    calc: d => parseFloat(d.area)||0
+  },
+  {
+    id: "contrapiso",
+    nome: "Contrapiso",
+    grupo: "Revestimento",
+    campos: ["area", "valor", "obs"],
+    tipos: ["Simples","Com tela","Com fibra"],
+    calc: d => parseFloat(d.area)||0
+  },
+  // ── Pisos e Calçadas ──────────────────────────────────────────────────────
+  {
+    id: "piso",
+    nome: "Piso / Calçada",
+    grupo: "Piso",
+    campos: ["largura", "comprimento", "valor", "obs"],
+    tipos: ["Calçada cimento","Concreto armado","Bloquete","Pedra portuguesa","Rampa","Pátio externo"],
+    calc: d => (parseFloat(d.largura)||0) * (parseFloat(d.comprimento)||0)
+  },
+  // ── Laje e Cobertura ──────────────────────────────────────────────────────
+  {
+    id: "laje",
+    nome: "Laje",
+    grupo: "Cobertura",
+    campos: ["area", "valor", "obs"],
+    tipos: ["Convencional","Pré-moldada (vigota)","Cobertura","Piso intermediário"],
+    calc: d => parseFloat(d.area)||0
+  },
+  {
+    id: "cobertura",
+    nome: "Cobertura / Telhado",
+    grupo: "Cobertura",
+    campos: ["area", "valor", "obs"],
+    tipos: ["Cerâmica","Fibrocimento","Metálica","Shingle","2 águas","4 águas"],
+    calc: d => parseFloat(d.area)||0
+  },
+  // ── Especiais ─────────────────────────────────────────────────────────────
+  {
+    id: "escada",
+    nome: "Escada",
+    grupo: "Especial",
+    campos: ["unidades", "degraus", "largura", "valor", "obs"],
+    unidadeLabel: "Lances",
+    tipos: ["Concreto armado","Alvenaria","Externa","Em leque"],
+    calc: d => (parseInt(d.unidades)||1) * (parseInt(d.degraus)||0)
+  },
+  {
+    id: "cisterna",
+    nome: "Cisterna / Caixa d'água",
+    grupo: "Especial",
+    campos: ["unidades", "largura", "comprimento", "profundidade", "valor", "obs"],
+    unidadeLabel: "Cisternas",
+    tipos: ["Anéis pré-moldados","Caixa enterrada","Caixa de passagem","Caixa de gordura"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.largura)||0) * (parseFloat(d.comprimento)||0) * (parseFloat(d.profundidade)||0)
+  },
+  {
+    id: "mureta",
+    nome: "Mureta / Platibanda",
+    grupo: "Especial",
+    campos: ["unidades", "altura", "comprimento", "valor", "obs"],
+    unidadeLabel: "Trechos",
+    tipos: ["Platibanda","Mureta de separação","Mureta de piscina","Mureta de jardim"],
+    calc: d => (parseInt(d.unidades)||1) * (parseFloat(d.altura)||0) * (parseFloat(d.comprimento)||0)
+  },
+  {
+    id: "outros",
+    nome: "Outros serviços",
+    grupo: "Geral",
+    campos: ["valor", "obs"],
+    tipos: ["Reforma geral","Demolição","Acabamento","Serviço avulso"],
+    calc: () => 1
+  }
 ];
 
-let state = {};
-let open = [];
-
-function render(){
-document.getElementById("services").innerHTML = SERVICOS.map(s=>{
-let active = open.includes(s.id);
-return `
-<div class="service ${active?'active':''}" onclick="toggle('${s.id}')">
-${s.nome}
-${active ? box(s) : ""}
-</div>
-`;
-}).join("");
-calc();
-}
-
-function box(s){
-if(!state[s.id]) state[s.id] = { tipo: "", altura: "", comprimento: "", largura: "", area: "", degraus: "", profundidade: "", valor: "" };
-let d = state[s.id];
-
-return `
-<div class="box" onclick="event.stopPropagation()">
-<label>Tipo do serviço</label>
-<select onchange="state['${s.id}'].tipo=this.value; calc()">
-<option value="">Selecione</option>
-${s.tipos.map(t=>`<option ${d.tipo===t?'selected':''}>${t}</option>`).join("")}
-</select>
-
-${s.campos.includes("altura")?`<label>Altura (m)</label><input type="number" step="0.01" value="${d.altura}" placeholder="Ex: 2.50" oninput="state['${s.id}'].altura=this.value; calc()">`:``}
-${s.campos.includes("comprimento")?`<label>Comprimento (m)</label><input type="number" step="0.01" value="${d.comprimento}" placeholder="Ex: 10.00" oninput="state['${s.id}'].comprimento=this.value; calc()">`:``}
-${s.campos.includes("largura")?`<label>Largura (m)</label><input type="number" step="0.01" value="${d.largura}" placeholder="Ex: 4.00" oninput="state['${s.id}'].largura=this.value; calc()">`:``}
-${s.campos.includes("area")?`<label>Área Total (m²)</label><input type="number" step="0.01" value="${d.area}" placeholder="Ex: 50" oninput="state['${s.id}'].area=this.value; calc()">`:``}
-${s.campos.includes("degraus")?`<label>Quantidade de Degraus</label><input type="number" value="${d.degraus}" placeholder="Ex: 15" oninput="state['${s.id}'].degraus=this.value; calc()">`:``}
-${s.campos.includes("profundidade")?`<label>Profundidade (m)</label><input type="number" step="0.01" value="${d.profundidade}" placeholder="Ex: 3.00" oninput="state['${s.id}'].profundidade=this.value; calc()">`:``}
-
-<label>Valor Unitário / por m² (R$)</label>
-<input type="number" step="0.01" value="${d.valor}" placeholder="Ex: 150.00" oninput="state['${s.id}'].valor=this.value; calc()">
-</div>
-`;
-}
-
-function toggle(id){
-if(open.includes(id)){
-open = open.filter(x=>x!=id);
-} else {
-open.push(id);
-}
-render();
-}
-
-function calc(){
-let total = 0;
-let html = "";
-
-open.forEach(id=>{
-let s = SERVICOS.find(x=>x.id===id);
-let d = state[id] || {};
-
-let q = s.calc(d);
-let v = +d.valor || 0;
-let t = q * v;
-
-total += t;
-
-if(t > 0){
-html += `<div class="badge">${s.nome} (${d.tipo || 'Geral'}): R$ ${t.toFixed(2)}</div>`;
-}
+// Estado centralizado — nunca é zerado pelo render
+const state = {};
+SERVICOS.forEach(s => {
+  state[s.id] = {
+    open: false,
+    tipo: "",
+    unidades: "1",
+    altura: "", comprimento: "", largura: "", espessura: "",
+    area: "", diametro: "", degraus: "", profundidade: "",
+    valor: "", obs: ""
+  };
 });
 
-document.getElementById("res").innerHTML = html || "<small style='color:#64748b'>Nenhum serviço calculado.</small>";
-document.getElementById("total").innerText = "Total: R$ " + total.toFixed(2);
+// ─── Render inicial: cria todos os elementos uma única vez ────────────────
+function init() {
+  const container = document.getElementById("services");
+  container.innerHTML = "";
+
+  // Agrupar serviços por grupo
+  const grupos = {};
+  SERVICOS.forEach(s => {
+    const g = s.grupo || "Geral";
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(s);
+  });
+
+  const icones = {
+    "Estrutura":    "🏗️",
+    "Alvenaria":    "🧱",
+    "Revestimento": "🪟",
+    "Piso":         "🔲",
+    "Cobertura":    "🏠",
+    "Especial":     "⚙️",
+    "Geral":        "📋"
+  };
+
+  Object.entries(grupos).forEach(([grupo, servicos]) => {
+    // Cabeçalho do grupo
+    const grupoEl = document.createElement("div");
+    grupoEl.style.cssText = "margin: 14px 0 4px 0; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px;";
+    grupoEl.textContent = `${icones[grupo] || "📌"} ${grupo}`;
+    container.appendChild(grupoEl);
+
+    servicos.forEach(s => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "service-item";
+      wrapper.id = `wrap-${s.id}`;
+
+      const header = document.createElement("div");
+      header.className = "service-header";
+      header.innerHTML = `<span>${s.nome}</span><span class="arrow">▼</span>`;
+      header.addEventListener("click", () => toggleService(s.id));
+
+      const body = document.createElement("div");
+      body.className = "service-body";
+      body.id = `body-${s.id}`;
+      body.innerHTML = buildBodyHTML(s);
+
+      bindEvents(body, s);
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(body);
+      container.appendChild(wrapper);
+    });
+  });
+
+  calcResumo();
 }
 
-function gerarPDF(){
-const { jsPDF } = window.jspdf;
-const doc = new jsPDF();
+function buildBodyHTML(s) {
+  const d = state[s.id];
+  const unidLabel = s.unidadeLabel || "Unidades";
+  return `
+    <label>Tipo do serviço</label>
+    <select data-field="tipo" data-id="${s.id}">
+      <option value="">Selecione</option>
+      ${s.tipos.map(t => `<option value="${t}" ${d.tipo===t?"selected":""}>${t}</option>`).join("")}
+    </select>
 
-let nome = document.getElementById("nome").value || "Não informado";
-let tel = document.getElementById("tel").value || "Não informado";
-let cidade = document.getElementById("cidade").value || "Não informado";
+    ${s.campos.includes("unidades") ? `
+      <label>Quantidade de ${unidLabel}</label>
+      <input type="number" min="1" step="1" placeholder="Ex: 4"
+        data-field="unidades" data-id="${s.id}" value="${d.unidades||1}">
+    ` : ""}
+    ${s.campos.includes("diametro") ? `
+      <label>Diâmetro (m)</label>
+      <input type="number" step="0.01" placeholder="Ex: 0.60"
+        data-field="diametro" data-id="${s.id}" value="${d.diametro}">
+    ` : ""}
+    ${s.campos.includes("largura") ? `
+      <label>Largura (m)</label>
+      <input type="number" step="0.01" placeholder="Ex: 0.40"
+        data-field="largura" data-id="${s.id}" value="${d.largura}">
+    ` : ""}
+    ${s.campos.includes("espessura") ? `
+      <label>Espessura (m)</label>
+      <input type="number" step="0.01" placeholder="Ex: 0.30"
+        data-field="espessura" data-id="${s.id}" value="${d.espessura}">
+    ` : ""}
+    ${s.campos.includes("altura") ? `
+      <label>Altura (m)</label>
+      <input type="number" step="0.01" placeholder="Ex: 3.00"
+        data-field="altura" data-id="${s.id}" value="${d.altura}">
+    ` : ""}
+    ${s.campos.includes("comprimento") ? `
+      <label>Comprimento (m)</label>
+      <input type="number" step="0.01" placeholder="Ex: 10.00"
+        data-field="comprimento" data-id="${s.id}" value="${d.comprimento}">
+    ` : ""}
+    ${s.campos.includes("profundidade") ? `
+      <label>Profundidade (m)</label>
+      <input type="number" step="0.01" placeholder="Ex: 3.00"
+        data-field="profundidade" data-id="${s.id}" value="${d.profundidade}">
+    ` : ""}
+    ${s.campos.includes("area") ? `
+      <label>Área Total (m²)</label>
+      <input type="number" step="0.01" placeholder="Ex: 50"
+        data-field="area" data-id="${s.id}" value="${d.area}">
+    ` : ""}
+    ${s.campos.includes("degraus") ? `
+      <label>Degraus por Lance</label>
+      <input type="number" placeholder="Ex: 15"
+        data-field="degraus" data-id="${s.id}" value="${d.degraus}">
+    ` : ""}
 
-// 1. Faixa de Cabeçalho Superior Azul Escuro
-doc.setFillColor(15, 23, 42);
-doc.rect(0, 0, 220, 35, 'F');
+    <label>Valor por Unidade / m² / m³ (R$)</label>
+    <input type="number" step="0.01" placeholder="Ex: 150.00"
+      data-field="valor" data-id="${s.id}" value="${d.valor}">
 
-doc.setTextColor(56, 189, 248);
-doc.setFont("Helvetica", "bold");
-doc.setFontSize(20);
-doc.text("ORÇAMENTO DE MÃO DE OBRA", 14, 22);
+    <label>Observações (opcional)</label>
+    <textarea placeholder="Ex: armadura inclusa, prazo estimado, material por conta do cliente…"
+      data-field="obs" data-id="${s.id}">${d.obs}</textarea>
+  `;
+}
 
-doc.setFontSize(10);
-doc.setTextColor(148, 163, 184);
-const dataAtual = new Date().toLocaleDateString('pt-BR');
-doc.text(`Data de Emissão: ${dataAtual}`, 14, 29);
+function bindEvents(body, s) {
+  body.querySelectorAll("[data-field]").forEach(el => {
+    const evt = el.tagName === "TEXTAREA" ? "input" : "input";
+    el.addEventListener(evt, () => {
+      const field = el.dataset.field;
+      const id = el.dataset.id;
+      state[id][field] = el.value;
+      calcResumo();
+    });
+    // select usa "change"
+    if (el.tagName === "SELECT") {
+      el.removeEventListener("input", () => {});
+      el.addEventListener("change", () => {
+        state[el.dataset.id][el.dataset.field] = el.value;
+        calcResumo();
+      });
+    }
+  });
+}
 
-// 2. Painel de Dados do Cliente
-doc.setTextColor(15, 23, 42);
-doc.setFontSize(12);
-doc.setFont("Helvetica", "bold");
-doc.text("DADOS DO CLIENTE", 14, 48);
+// ─── Toggle: apenas altera classe, não recria DOM ─────────────────────────
+function toggleService(id) {
+  state[id].open = !state[id].open;
 
-doc.setFont("Helvetica", "normal");
-doc.setFontSize(11);
-doc.text(`Cliente: ${nome}`, 14, 56);
-doc.text(`Telefone: ${tel}`, 14, 63);
-doc.text(`Cidade/Local: ${cidade}`, 14, 70);
+  const wrap   = document.getElementById(`wrap-${id}`);
+  const header = wrap.querySelector(".service-header");
+  const body   = document.getElementById(`body-${id}`);
 
-doc.setDrawColor(203, 213, 225);
-doc.line(14, 76, 196, 76);
+  header.classList.toggle("active", state[id].open);
+  body.classList.toggle("open",   state[id].open);
+}
 
-// 3. Montar as Colunas e Linhas para a tabela do PDF
-const colunas = ["Serviço / Tipo", "Medida / Qtd", "Valor Unitário", "Total Item"];
-const linhas = [];
-let totalGeral = 0;
+// ─── Cálculo do resumo ────────────────────────────────────────────────────
+function calcResumo() {
+  let total = 0;
+  let html = "";
 
-open.forEach(id => {
-    let s = SERVICOS.find(x => x.id === id);
-    let d = state[id] || {};
-    let q = s.calc(d);
-    let v = +d.valor || 0;
-    let t = q * v;
+  SERVICOS.forEach(s => {
+    const d = state[s.id];
+    const q = s.calc(d);
+    const v = parseFloat(d.valor) || 0;
+    const t = q * v;
+    total += t;
+
+    if (t > 0) {
+      const unStr = s.campos.includes("unidades") ? ` · ${parseInt(d.unidades)||1} un.` : "";
+      html += `<div class="badge">${s.nome}${unStr} (${d.tipo || "Geral"}): R$ ${fmt(t)}</div>`;
+    }
+  });
+
+  document.getElementById("res").innerHTML = html ||
+    `<small class="empty-msg">Nenhum serviço calculado ainda.</small>`;
+  document.getElementById("total").innerText = "Total: R$ " + fmt(total);
+}
+
+function fmt(n) {
+  return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ─── Geração do PDF ───────────────────────────────────────────────────────
+function gerarPDF() {
+  const alertEl = document.getElementById("alert-pdf");
+
+  // Validação: precisa ter ao menos 1 item com valor
+  const linhas = [];
+  let totalGeral = 0;
+
+  SERVICOS.forEach(s => {
+    const d = state[s.id];
+    const q = s.calc(d);
+    const v = parseFloat(d.valor) || 0;
+    const t = q * v;
+    if (t <= 0) return;
+
     totalGeral += t;
 
-    let unidade = "m²";
-    if (s.id === "escada") unidade = "degraus";
-    if (s.id === "cisterna") unidade = "m prof.";
-    if (s.id === "outros") unidade = "unid.";
+    // Montar texto de medida legível
+    let textoMedida = "";
+    const un = parseInt(d.unidades) || 1;
 
-    let textoMedida = `${q.toFixed(2)} ${unidade}`;
-    if(s.id === "outros") textoMedida = "1 unid.";
+    if (s.id === "outros") {
+      textoMedida = "1 serviço";
+    } else if (s.campos.includes("unidades") && s.campos.includes("diametro")) {
+      // Tubulão / Estaca — volume por peça
+      const r = (parseFloat(d.diametro)||0) / 2;
+      const len = parseFloat(d.comprimento || d.profundidade) || 0;
+      const volUnit = (Math.PI * r * r * len).toFixed(3);
+      textoMedida = `${un} un. × ${volUnit} m³`;
+    } else if (s.campos.includes("unidades") && s.campos.includes("degraus")) {
+      textoMedida = `${un} lance(s) × ${parseInt(d.degraus)||0} degraus`;
+    } else if (s.campos.includes("unidades") && (s.campos.includes("largura") || s.campos.includes("comprimento") || s.campos.includes("espessura") || s.campos.includes("altura"))) {
+      textoMedida = `${un} un. — ${q.toFixed(3)} m³`;
+    } else if (s.campos.includes("area")) {
+      textoMedida = `${q.toFixed(2)} m²`;
+    } else if (s.campos.includes("largura") && s.campos.includes("comprimento")) {
+      textoMedida = `${q.toFixed(2)} m²`;
+    } else if (s.campos.includes("altura") && s.campos.includes("comprimento")) {
+      textoMedida = `${q.toFixed(2)} m²`;
+    } else {
+      textoMedida = `${q.toFixed(2)}`;
+    }
+
+    const obsTexto = d.obs ? d.obs : "-";
 
     linhas.push([
-        `${s.nome} (${d.tipo || 'Geral'})`,
-        textoMedida,
-        `R$ ${v.toFixed(2)}`,
-        `R$ ${t.toFixed(2)}`
+      `${s.nome}\n(${d.tipo || "Geral"})`,
+      textoMedida,
+      `R$ ${fmt(v)}`,
+      `R$ ${fmt(t)}`,
+      obsTexto
     ]);
-});
+  });
 
-// 4. Criação Dinâmica da Tabela estruturada
-doc.autoTable({
+  if (linhas.length === 0) {
+    alertEl.style.display = "block";
+    return;
+  }
+  alertEl.style.display = "none";
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const nome   = document.getElementById("nome").value.trim()   || "Não informado";
+  const tel    = document.getElementById("tel").value.trim()    || "Não informado";
+  const cidade = document.getElementById("cidade").value.trim() || "Não informado";
+
+  // Cabeçalho
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 220, 35, "F");
+
+  doc.setTextColor(56, 189, 248);
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("ORÇAMENTO DE MÃO DE OBRA", 14, 22);
+
+  doc.setFontSize(10);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Data de Emissão: ${new Date().toLocaleDateString("pt-BR")}`, 14, 29);
+
+  // Dados do cliente
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("DADOS DO CLIENTE", 14, 48);
+
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text(`Cliente: ${nome}`,      14, 56);
+  doc.text(`Telefone: ${tel}`,      14, 63);
+  doc.text(`Cidade/Local: ${cidade}`, 14, 70);
+
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, 76, 196, 76);
+
+  // Tabela
+  doc.autoTable({
     startY: 84,
-    head: [colunas],
+    head: [["Serviço / Tipo", "Medida / Qtd", "Valor Unit.", "Total Item", "Observações"]],
     body: linhas,
-    theme: 'grid',
-    headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontStyle: 'bold' },
-    styles: { font: "Helvetica", fontSize: 10 },
+    theme: "grid",
+    headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontStyle: "bold" },
+    styles: { font: "Helvetica", fontSize: 9, cellPadding: 3 },
     columnStyles: {
-        0: { cellWidth: 70 },
-        1: { cellWidth: 40, halign: 'center' },
-        2: { cellWidth: 40, halign: 'right' },
-        3: { cellWidth: 32, halign: 'right' }
+      0: { cellWidth: 48 },
+      1: { cellWidth: 28, halign: "center" },
+      2: { cellWidth: 28, halign: "right" },
+      3: { cellWidth: 28, halign: "right" },
+      4: { cellWidth: 54 }
     }
-});
+  });
 
-// 5. Totalizador Geral abaixo da tabela
-let finalY = doc.lastAutoTable.finalY + 15;
+  // Totalizador
+  let finalY = doc.lastAutoTable.finalY + 15;
+  if (finalY > 275) { doc.addPage(); finalY = 30; }
 
-if (finalY > 275) {
-    doc.addPage();
-    finalY = 30;
+  doc.setFillColor(241, 245, 249);
+  doc.rect(14, finalY - 8, 182, 14, "F");
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(15, 23, 42);
+  doc.text("VALOR TOTAL DO ORÇAMENTO:", 18, finalY);
+  doc.text(`R$ ${fmt(totalGeral)}`, 194, finalY, { align: "right" });
+
+  // Rodapé
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: "center" });
+  }
+
+  doc.save(`Orcamento_${nome.replace(/\s+/g, "_")}.pdf`);
 }
 
-doc.setFillColor(241, 245, 249);
-doc.rect(14, finalY - 8, 182, 14, 'F');
-
-doc.setFont("Helvetica", "bold");
-doc.setFontSize(13);
-doc.setTextColor(15, 23, 42);
-doc.text(`VALOR TOTAL DO ORÇAMENTO:`, 18, finalY);
-doc.text(`R$ ${totalGeral.toFixed(2)}`, 194, finalY, { align: 'right' });
-
-// Nome do arquivo baseado no cliente
-doc.save(`Orcamento_${nome.replace(/\s+/g, '_')}.pdf`);
-}
-
-render();
+// ─── Start ────────────────────────────────────────────────────────────────
+init();
 </script>
 
 </body>
