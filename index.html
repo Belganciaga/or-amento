@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamento Pedreiro PRO V5</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+body{font-family:Arial, sans-serif;background:#0f172a;color:#fff;padding:12px;margin:0;}
+.card{background:#111827;padding:15px;border-radius:10px;margin-bottom:10px;border:1px solid #1e293b;}
+.service{
+background:#1f2937;
+padding:14px;
+border-radius:10px;
+margin:8px 0;
+cursor:pointer;
+font-weight:bold;
+transition: background 0.2s;
+}
+.service.active{background:#38bdf8;color:#000}
+.box{
+margin-top:10px;
+background:#0b1220;
+padding:12px;
+border-radius:10px;
+border:1px solid #334155;
+color: #fff;
+cursor: default;
+}
+input,select,button{
+width:100%;
+padding:10px;
+margin-top:8px;
+border-radius:8px;
+border:1px solid #334155;
+background:#1f2937;
+color:#fff;
+box-sizing: border-box;
+}
+input:focus, select:focus {outline: 2px solid #38bdf8;}
+button{background:#38bdf8;color:#000;font-weight:bold;cursor:pointer;border:0;margin-top:15px;font-size:16px;}
+button:hover{background:#0ea5e9;}
+.badge{display:inline-block;background:#1e293b;padding:6px 10px;margin:4px;border-radius:6px;font-size:13px;border:1px solid #334155;}
+.total{font-size:24px;color:#38bdf8;font-weight:bold;margin-top:12px;}
+label {font-size:12px; color:#94a3b8; display:block; margin-top:8px;}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h2>Orçamento Pedreiro PRO</h2>
+</div>
+
+<div class="card">
+<h3>Cliente</h3>
+<input id="nome" placeholder="Nome do Cliente">
+<input id="tel" placeholder="Telefone / WhatsApp">
+<input id="cidade" placeholder="Cidade / Estado">
+</div>
+
+<div class="card">
+<h3>Serviços</h3>
+<div id="services"></div>
+</div>
+
+<div class="card">
+<h3>Resumo</h3>
+<div id="res"></div>
+<div class="total" id="total">R$ 0,00</div>
+<button onclick="gerarPDF()">Gerar PDF Profissional</button>
+</div>
+
+<script>
+const SERVICOS = [
+{
+id:"muro",
+nome:"Muro",
+campos:["altura","comprimento","valor"],
+tipos:["Tijolo comum","Tijolo 8 furos","Bloco de concreto","Arrimo","Pedra/Gabião"],
+calc:d=>(+d.altura||0)*(+d.comprimento||0)
+},
+{
+id:"alvenaria",
+nome:"Parede / Alvenaria",
+campos:["altura","comprimento","valor"],
+tipos:["Tijolo comum","Tijolo 8 furos","Bloco de concreto","Bloco cerâmico","Tijolo à vista"],
+calc:d=>(+d.altura||0)*(+d.comprimento||0)
+},
+{
+id:"reboco",
+nome:"Reboco / Emboço",
+campos:["area","valor"],
+tipos:["Reboco interno","Reboco externo","Emboço fino","Chapisco + reboco","Paulista"],
+calc:d=>+d.area||0
+},
+{
+id:"piso",
+nome:"Piso / Calçada",
+campos:["largura","comprimento","valor"],
+tipos:["Calçada cimento","Concreto armado","Bloquete","Pedra portuguesa","Rampa","Pátio externo"],
+calc:d=>(+d.largura||0)*(+d.comprimento||0)
+},
+{
+id:"laje",
+nome:"Laje",
+campos:["area","valor"],
+tipos:["Convencional","Pré-moldada (vigota)","Cobertura","Piso intermediário"],
+calc:d=>+d.area||0
+},
+{
+id:"fundacao",
+nome:"Fundação / Sapata",
+campos:["area","valor"],
+tipos:["Viga baldrame","Sapata isolada","Radier","Fundação corrida"],
+calc:d=>+d.area||0
+},
+{
+id:"revestimento",
+nome:"Revestimento",
+campos:["area","valor"],
+tipos:["Cerâmica parede","Cerâmica piso","Porcelanato","Azulejo banheiro","Ardósia","Pastilha"],
+calc:d=>+d.area||0
+},
+{
+id:"cobertura",
+nome:"Cobertura / Telhado",
+campos:["area","valor"],
+tipos:["Cerâmica","Fibrocimento","Metálica","Shingle","2 águas","4 águas"],
+calc:d=>+d.area||0
+},
+{
+id:"contrapiso",
+nome:"Contrapiso",
+campos:["area","valor"],
+tipos:["Simples","Com tela","Com fibra"],
+calc:d=>+d.area||0
+},
+{
+id:"escada",
+nome:"Escada",
+campos:["degraus","valor"],
+tipos:["Concreto armado","Alvenaria","Externa"],
+calc:d=>+d.degraus||0
+},
+{
+id:"cisterna",
+nome:"Cisterna / Caixa",
+campos:["profundidade","valor"],
+tipos:["Anéis pré-moldados","Caixa enterrada","Caixa de passagem"],
+calc:d=>+d.profundidade||0
+},
+{
+id:"outros",
+nome:"Outros serviços",
+campos:["valor"],
+tipos:["Reforma geral","Demolição","Acabamento","Serviço avulso"],
+calc:d=>1
+}
+];
+
+let state = {};
+let open = [];
+
+function render(){
+document.getElementById("services").innerHTML = SERVICOS.map(s=>{
+let active = open.includes(s.id);
+return `
+<div class="service ${active?'active':''}" onclick="toggle('${s.id}')">
+${s.nome}
+${active ? box(s) : ""}
+</div>
+`;
+}).join("");
+calc();
+}
+
+function box(s){
+if(!state[s.id]) state[s.id] = { tipo: "", altura: "", comprimento: "", largura: "", area: "", degraus: "", profundidade: "", valor: "" };
+let d = state[s.id];
+
+return `
+<div class="box" onclick="event.stopPropagation()">
+<label>Tipo do serviço</label>
+<select onchange="state['${s.id}'].tipo=this.value; calc()">
+<option value="">Selecione</option>
+${s.tipos.map(t=>`<option ${d.tipo===t?'selected':''}>${t}</option>`).join("")}
+</select>
+
+${s.campos.includes("altura")?`<label>Altura (m)</label><input type="number" step="0.01" value="${d.altura}" placeholder="Ex: 2.50" oninput="state['${s.id}'].altura=this.value; calc()">`:``}
+${s.campos.includes("comprimento")?`<label>Comprimento (m)</label><input type="number" step="0.01" value="${d.comprimento}" placeholder="Ex: 10.00" oninput="state['${s.id}'].comprimento=this.value; calc()">`:``}
+${s.campos.includes("largura")?`<label>Largura (m)</label><input type="number" step="0.01" value="${d.largura}" placeholder="Ex: 4.00" oninput="state['${s.id}'].largura=this.value; calc()">`:``}
+${s.campos.includes("area")?`<label>Área Total (m²)</label><input type="number" step="0.01" value="${d.area}" placeholder="Ex: 50" oninput="state['${s.id}'].area=this.value; calc()">`:``}
+${s.campos.includes("degraus")?`<label>Quantidade de Degraus</label><input type="number" value="${d.degraus}" placeholder="Ex: 15" oninput="state['${s.id}'].degraus=this.value; calc()">`:``}
+${s.campos.includes("profundidade")?`<label>Profundidade (m)</label><input type="number" step="0.01" value="${d.profundidade}" placeholder="Ex: 3.00" oninput="state['${s.id}'].profundidade=this.value; calc()">`:``}
+
+<label>Valor Unitário / por m² (R$)</label>
+<input type="number" step="0.01" value="${d.valor}" placeholder="Ex: 150.00" oninput="state['${s.id}'].valor=this.value; calc()">
+</div>
+`;
+}
+
+function toggle(id){
+if(open.includes(id)){
+open = open.filter(x=>x!=id);
+} else {
+open.push(id);
+}
+render();
+}
+
+function calc(){
+let total = 0;
+let html = "";
+
+open.forEach(id=>{
+let s = SERVICOS.find(x=>x.id===id);
+let d = state[id] || {};
+
+let q = s.calc(d);
+let v = +d.valor || 0;
+let t = q * v;
+
+total += t;
+
+if(t > 0){
+html += `<div class="badge">${s.nome} (${d.tipo || 'Geral'}): R$ ${t.toFixed(2)}</div>`;
+}
+});
+
+document.getElementById("res").innerHTML = html || "<small style='color:#64748b'>Nenhum serviço calculado.</small>";
+document.getElementById("total").innerText = "Total: R$ " + total.toFixed(2);
+}
+
+function gerarPDF(){
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF();
+
+let nome = document.getElementById("nome").value || "Não informado";
+let tel = document.getElementById("tel").value || "Não informado";
+let cidade = document.getElementById("cidade").value || "Não informado";
+
+// 1. Faixa de Cabeçalho Superior Azul Escuro
+doc.setFillColor(15, 23, 42);
+doc.rect(0, 0, 220, 35, 'F');
+
+doc.setTextColor(56, 189, 248);
+doc.setFont("Helvetica", "bold");
+doc.setFontSize(20);
+doc.text("ORÇAMENTO DE MÃO DE OBRA", 14, 22);
+
+doc.setFontSize(10);
+doc.setTextColor(148, 163, 184);
+const dataAtual = new Date().toLocaleDateString('pt-BR');
+doc.text(`Data de Emissão: ${dataAtual}`, 14, 29);
+
+// 2. Painel de Dados do Cliente
+doc.setTextColor(15, 23, 42);
+doc.setFontSize(12);
+doc.setFont("Helvetica", "bold");
+doc.text("DADOS DO CLIENTE", 14, 48);
+
+doc.setFont("Helvetica", "normal");
+doc.setFontSize(11);
+doc.text(`Cliente: ${nome}`, 14, 56);
+doc.text(`Telefone: ${tel}`, 14, 63);
+doc.text(`Cidade/Local: ${cidade}`, 14, 70);
+
+doc.setDrawColor(203, 213, 225);
+doc.line(14, 76, 196, 76);
+
+// 3. Montar as Colunas e Linhas para a tabela do PDF
+const colunas = ["Serviço / Tipo", "Medida / Qtd", "Valor Unitário", "Total Item"];
+const linhas = [];
+let totalGeral = 0;
+
+open.forEach(id => {
+    let s = SERVICOS.find(x => x.id === id);
+    let d = state[id] || {};
+    let q = s.calc(d);
+    let v = +d.valor || 0;
+    let t = q * v;
+    totalGeral += t;
+
+    let unidade = "m²";
+    if (s.id === "escada") unidade = "degraus";
+    if (s.id === "cisterna") unidade = "m prof.";
+    if (s.id === "outros") unidade = "unid.";
+
+    let textoMedida = `${q.toFixed(2)} ${unidade}`;
+    if(s.id === "outros") textoMedida = "1 unid.";
+
+    linhas.push([
+        `${s.nome} (${d.tipo || 'Geral'})`,
+        textoMedida,
+        `R$ ${v.toFixed(2)}`,
+        `R$ ${t.toFixed(2)}`
+    ]);
+});
+
+// 4. Criação Dinâmica da Tabela estruturada
+doc.autoTable({
+    startY: 84,
+    head: [colunas],
+    body: linhas,
+    theme: 'grid',
+    headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontStyle: 'bold' },
+    styles: { font: "Helvetica", fontSize: 10 },
+    columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 32, halign: 'right' }
+    }
+});
+
+// 5. Totalizador Geral abaixo da tabela
+let finalY = doc.lastAutoTable.finalY + 15;
+
+if (finalY > 275) {
+    doc.addPage();
+    finalY = 30;
+}
+
+doc.setFillColor(241, 245, 249);
+doc.rect(14, finalY - 8, 182, 14, 'F');
+
+doc.setFont("Helvetica", "bold");
+doc.setFontSize(13);
+doc.setTextColor(15, 23, 42);
+doc.text(`VALOR TOTAL DO ORÇAMENTO:`, 18, finalY);
+doc.text(`R$ ${totalGeral.toFixed(2)}`, 194, finalY, { align: 'right' });
+
+// Nome do arquivo baseado no cliente
+doc.save(`Orcamento_${nome.replace(/\s+/g, '_')}.pdf`);
+}
+
+render();
+</script>
+
+</body>
+</html>
